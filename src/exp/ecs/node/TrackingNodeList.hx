@@ -13,23 +13,23 @@ using tink.CoreApi;
  * 2. remove from the list those entities not fulfilling the condition
  */
 class TrackingNodeList<T:NodeBase, Event> extends NodeList<T> {
-	
+
 	var condition:Entity->Bool;
 	var engine:Engine<Event>;
 	var listeners:Map<Entity, CallbackLink> = new Map();
 	var binding:CallbackLink;
-	
+
 	public function new(engine, factory, condition, ?name) {
 		super(factory, name);
-		
+
 		this.engine = engine;
 		this.condition = condition;
-		
+
 		for(entity in engine.entities) {
 			track(entity);
 			if(condition(entity)) add(entity);
 		}
-			
+
 		binding = [
 			engine.entities.added.handle(function(entity) {
 				track(entity);
@@ -41,15 +41,15 @@ class TrackingNodeList<T:NodeBase, Event> extends NodeList<T> {
 			}),
 		];
 	}
-	
+
 	override function destroy() {
 		super.destroy();
-		for(l in listeners) l.dissolve();
+		for(l in listeners) l.cancel();
 		listeners = null;
-		binding.dissolve();
+		binding.cancel();
 		binding = null;
 	}
-			
+
 	function track(entity:Entity) {
 		if(listeners.exists(entity)) return; // already tracking
 		listeners.set(entity, [
@@ -57,13 +57,13 @@ class TrackingNodeList<T:NodeBase, Event> extends NodeList<T> {
 			entity.componentRemoved.handle(function(_) if(!condition(entity)) remove(entity)),
 		]);
 	}
-	
+
 	function untrack(entity:Entity) {
 		if(!listeners.exists(entity)) return; // not tracking
-		listeners.get(entity).dissolve();
+		listeners.get(entity).cancel();
 		listeners.remove(entity);
 	}
-	
+
 	override function toString():String {
 		return name == null ? 'TrackingNodeList#$id' : name;
 	}
